@@ -245,9 +245,14 @@ Get the artifacts of a job::
     build_or_job.artifacts()
 
 Get the artifacts of a job by its name from the latest successful pipeline of
-a branch or tag:
+a branch or tag::
 
-  project.artifacts(ref_name='main', job='build')
+  project.artifacts.download(ref_name='main', job='build')
+
+.. attention::
+
+    An older method ``project.artifacts()`` is deprecated and will be
+    removed in a future version.
 
 .. warning::
 
@@ -269,13 +274,22 @@ You can also directly stream the output into a file, and unzip it afterwards::
     subprocess.run(["unzip", "-bo", zipfn])
     os.unlink(zipfn)
 
+Delete all artifacts of a project that can be deleted::
+
+  project.artifacts.delete()
+
 Get a single artifact file::
 
     build_or_job.artifact('path/to/file')
 
 Get a single artifact file by branch and job::
 
-    project.artifact('branch', 'path/to/file', 'job')
+    project.artifacts.raw('branch', 'path/to/file', 'job')
+
+.. attention::
+
+    An older method ``project.artifact()`` is deprecated and will be
+    removed in a future version.
 
 Mark a job artifact as kept when expiration is set::
 
@@ -353,3 +367,27 @@ Examples
 Get the test report for a pipeline::
 
     test_report = pipeline.test_report.get()
+
+Pipeline test report summary
+============================
+
+Get a pipeline’s test report summary.
+
+Reference
+---------
+
+* v4 API
+
+  + :class:`gitlab.v4.objects.ProjectPipelineTestReportSummary`
+  + :class:`gitlab.v4.objects.ProjectPipelineTestReportSummaryManager`
+  + :attr:`gitlab.v4.objects.ProjectPipeline.test_report_summary`
+
+* GitLab API: https://docs.gitlab.com/ee/api/pipelines.html#get-a-pipelines-test-report-summary
+
+Examples
+--------
+
+Get the test report summary for a pipeline::
+
+    test_report_summary = pipeline.test_report_summary.get()
+

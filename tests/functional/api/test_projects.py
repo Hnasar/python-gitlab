@@ -146,9 +146,11 @@ def test_project_labels(project):
     label = project.labels.get("label")
     assert label == labels[0]
 
-    label.new_name = "labelupdated"
+    label.new_name = "Label:that requires:encoding"
     label.save()
-    assert label.name == "labelupdated"
+    assert label.name == "Label:that requires:encoding"
+    label = project.labels.get("Label:that requires:encoding")
+    assert label.name == "Label:that requires:encoding"
 
     label.subscribe()
     assert label.subscribed is True
@@ -242,7 +244,7 @@ def test_project_protected_branches(project):
 
 
 def test_project_remote_mirrors(project):
-    mirror_url = "http://gitlab.test/root/mirror.git"
+    mirror_url = "https://gitlab.example.com/root/mirror.git"
 
     mirror = project.remote_mirrors.create({"url": mirror_url})
     assert mirror.url == mirror_url

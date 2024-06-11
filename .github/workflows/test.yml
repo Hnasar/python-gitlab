@@ -45,9 +45,9 @@ jobs:
               version: "3.10"
               toxenv: py310,smoke
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python.version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python.version }}
       - name: Install dependencies
@@ -55,7 +55,7 @@ jobs:
       - name: Run tests
         env:
           TOXENV: ${{ matrix.python.toxenv }}
-        run: tox
+        run: tox --skip-missing-interpreters false
 
   functional:
     runs-on: ubuntu-20.04
@@ -63,9 +63,9 @@ jobs:
       matrix:
         toxenv: [py_func_v4, cli_func_v4]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -75,7 +75,7 @@ jobs:
           TOXENV: ${{ matrix.toxenv }}
         run: tox -- --override-ini='log_cli=True'
       - name: Upload codecov coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ./coverage.xml
           flags: ${{ matrix.toxenv }}
@@ -84,9 +84,9 @@ jobs:
   coverage:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -97,7 +97,7 @@ jobs:
           TOXENV: cover
         run: tox
       - name: Upload codecov coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ./coverage.xml
           flags: unit

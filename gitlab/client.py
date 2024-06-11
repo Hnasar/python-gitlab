@@ -24,6 +24,7 @@ import requests
 import requests.utils
 from requests_toolbelt.multipart.encoder import MultipartEncoder  # type: ignore
 
+import gitlab
 import gitlab.config
 import gitlab.const
 import gitlab.exceptions
@@ -33,6 +34,14 @@ REDIRECT_MSG = (
     "python-gitlab detected a {status_code} ({reason!r}) redirection. You must update "
     "your GitLab URL to the correct URL to avoid issues. The redirection was from: "
     "{source!r} to {target!r}"
+)
+
+RETRYABLE_TRANSIENT_ERROR_CODES = [500, 502, 503, 504] + list(range(520, 531))
+
+# https://docs.gitlab.com/ee/api/#offset-based-pagination
+_PAGINATION_URL = (
+    f"https://python-gitlab.readthedocs.io/en/v{gitlab.__version__}/"
+    f"api-usage.html#pagination"
 )
 
 
@@ -54,8 +63,8 @@ class Gitlab:
         pagination: Can be set to 'keyset' to use keyset pagination
         order_by: Set order_by globally
         user_agent: A custom user agent to use for making HTTP requests.
-        retry_transient_errors: Whether to retry after 500, 502, 503, or
-            504 responses. Defaults to False.
+        retry_transient_errors: Whether to retry after 500, 502, 503, 504
+            or 52x responses. Defaults to False.
     """
 
     def __init__(
@@ -615,6 +624,7 @@ class Gitlab:
         files: Optional[Dict[str, Any]] = None,
         timeout: Optional[float] = None,
         obey_rate_limit: bool = True,
+        retry_transient_errors: Optional[bool] = None,
         max_retries: int = 10,
         **kwargs: Any,
     ) -> requests.Response:
@@ -633,6 +643,8 @@ class Gitlab:
             timeout: The timeout, in seconds, for the request
             obey_rate_limit: Whether to obey 429 Too Many Request
                                     responses. Defaults to True.
+            retry_transient_errors: Whether to retry after 500, 502, 503, 504
+                or 52x responses. Defaults to False.
             max_retries: Max retries after 429 or transient errors,
                                set to -1 to retry forever. Defaults to 10.
             **kwargs: Extra options to send to the server (e.g. sudo)
@@ -647,7 +659,7 @@ class Gitlab:
         url = self._build_url(path)
 
         params: Dict[str, Any] = {}
-        utils.copy_dict(params, query_data)
+        utils.copy_dict(src=query_data, dest=params)
 
         # Deal with kwargs: by default a user uses kwargs to send data to the
         # gitlab server, but this generates problems (python keyword conflicts
@@ -656,12 +668,12 @@ class Gitlab:
         # value as arguments for the gitlab server, and ignore the other
         # arguments, except pagination ones (per_page and page)
         if "query_parameters" in kwargs:
-            utils.copy_dict(params, kwargs["query_parameters"])
+            utils.copy_dict(src=kwargs["query_parameters"], dest=params)
             for arg in ("per_page", "page"):
                 if arg in kwargs:
                     params[arg] = kwargs[arg]
         else:
-            utils.copy_dict(params, kwargs)
+            utils.copy_dict(src=kwargs, dest=params)
 
         opts = self._get_session_opts()
 
@@ -670,6 +682,8 @@ class Gitlab:
         # If timeout was passed into kwargs, allow it to override the default
         if timeout is None:
             timeout = opts_timeout
+        if retry_transient_errors is None:
+            retry_transient_errors = self.retry_transient_errors
 
         # We need to deal with json vs. data when uploading files
         json, data, content_type = self._prepare_send_data(files, post_data, raw)
@@ -677,33 +691,46 @@ class Gitlab:
 
         cur_retries = 0
         while True:
-            result = self.session.request(
-                method=verb,
-                url=url,
-                json=json,
-                data=data,
-                params=params,
-                timeout=timeout,
-                verify=verify,
-                stream=streamed,
-                **opts,
-            )
+            try:
+                result = self.session.request(
+                    method=verb,
+                    url=url,
+                    json=json,
+                    data=data,
+                    params=params,
+                    timeout=timeout,
+                    verify=verify,
+                    stream=streamed,
+                    **opts,
+                )
+            except (requests.ConnectionError, requests.exceptions.ChunkedEncodingError):
+                if retry_transient_errors and (
+                    max_retries == -1 or cur_retries < max_retries
+                ):
+                    wait_time = 2**cur_retries * 0.1
+                    cur_retries += 1
+                    time.sleep(wait_time)
+                    continue
+
+                raise
 
             self._check_redirects(result)
 
             if 200 <= result.status_code < 300:
                 return result
 
-            retry_transient_errors = kwargs.get(
-                "retry_transient_errors", self.retry_transient_errors
-            )
             if (429 == result.status_code and obey_rate_limit) or (
-                result.status_code in [500, 502, 503, 504] and retry_transient_errors
+                result.status_code in RETRYABLE_TRANSIENT_ERROR_CODES
+                and retry_transient_errors
             ):
+                # Response headers documentation:
+                # https://docs.gitlab.com/ee/user/admin_area/settings/user_and_ip_rate_limits.html#response-headers
                 if max_retries == -1 or cur_retries < max_retries:
-                    wait_time = 2 ** cur_retries * 0.1
+                    wait_time = 2**cur_retries * 0.1
                     if "Retry-After" in result.headers:
                         wait_time = int(result.headers["Retry-After"])
+                    elif "RateLimit-Reset" in result.headers:
+                        wait_time = int(result.headers["RateLimit-Reset"]) - time.time()
                     cur_retries += 1
                     time.sleep(wait_time)
                     continue
@@ -808,20 +835,59 @@ class Gitlab:
         # In case we want to change the default behavior at some point
         as_list = True if as_list is None else as_list
 
-        get_all = kwargs.pop("all", False)
+        get_all = kwargs.pop("all", None)
         url = self._build_url(path)
 
         page = kwargs.get("page")
 
-        if get_all is True and as_list is True:
+        if as_list is False:
+            # Generator requested
+            return GitlabList(self, url, query_data, **kwargs)
+
+        if get_all is True:
             return list(GitlabList(self, url, query_data, **kwargs))
 
-        if page or as_list is True:
-            # pagination requested, we return a list
-            return list(GitlabList(self, url, query_data, get_next=False, **kwargs))
+        # pagination requested, we return a list
+        gl_list = GitlabList(self, url, query_data, get_next=False, **kwargs)
+        items = list(gl_list)
 
-        # No pagination, generator requested
-        return GitlabList(self, url, query_data, **kwargs)
+        def should_emit_warning() -> bool:
+            # No warning is emitted if any of the following conditions apply:
+            # * `all=False` was set in the `list()` call.
+            # * `page` was set in the `list()` call.
+            # * GitLab did not return the `x-per-page` header.
+            # * Number of items received is less than per-page value.
+            # * Number of items received is >= total available.
+            if get_all is False:
+                return False
+            if page is not None:
+                return False
+            if gl_list.per_page is None:
+                return False
+            if len(items) < gl_list.per_page:
+                return False
+            if gl_list.total is not None and len(items) >= gl_list.total:
+                return False
+            return True
+
+        if not should_emit_warning():
+            return items
+
+        # Warn the user that they are only going to retrieve `per_page`
+        # maximum items. This is a common cause of issues filed.
+        total_items = "many" if gl_list.total is None else gl_list.total
+        utils.warn(
+            message=(
+                f"Calling a `list()` method without specifying `all=True` or "
+                f"`as_list=False` will return a maximum of {gl_list.per_page} items. "
+                f"Your query returned {len(items)} of {total_items} items. See "
+                f"{_PAGINATION_URL} for more details. If this was done intentionally, "
+                f"then this warning can be supressed by adding the argument "
+                f"`all=False` to the `list()` call."
+            ),
+            category=UserWarning,
+        )
+        return items
 
     def http_post(
         self,
@@ -1039,11 +1105,9 @@ class GitlabList:
         return int(self._next_page) if self._next_page else None
 
     @property
-    def per_page(self) -> int:
+    def per_page(self) -> Optional[int]:
         """The number of items per page."""
-        if TYPE_CHECKING:
-            assert self._per_page is not None
-        return int(self._per_page)
+        return int(self._per_page) if self._per_page is not None else None
 
     # NOTE(jlvillal): When a query returns more than 10,000 items, GitLab doesn't return
     # the headers 'x-total-pages' and 'x-total'. In those cases we return None.

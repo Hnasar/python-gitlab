@@ -369,7 +369,7 @@ class ProjectUserManager(ListMixin, RESTManager):
     _obj_cls = ProjectUser
     _from_parent_attrs = {"project_id": "id"}
     _list_filters = ("search", "skip_users")
-    _types = {"skip_users": types.CommaSeparatedListAttribute}
+    _types = {"skip_users": types.ArrayAttribute}
 
 
 class UserEmail(ObjectDeleteMixin, RESTObject):
@@ -429,11 +429,14 @@ class UserKey(ObjectDeleteMixin, RESTObject):
     pass
 
 
-class UserKeyManager(ListMixin, CreateMixin, DeleteMixin, RESTManager):
+class UserKeyManager(RetrieveMixin, CreateMixin, DeleteMixin, RESTManager):
     _path = "/users/{user_id}/keys"
     _obj_cls = UserKey
     _from_parent_attrs = {"user_id": "id"}
     _create_attrs = RequiredOptional(required=("title", "key"))
+
+    def get(self, id: Union[str, int], lazy: bool = False, **kwargs: Any) -> UserKey:
+        return cast(UserKey, super().get(id=id, lazy=lazy, **kwargs))
 
 
 class UserIdentityProviderManager(DeleteMixin, RESTManager):

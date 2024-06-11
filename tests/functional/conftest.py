@@ -39,6 +39,8 @@ def reset_gitlab(gl):
             )
             deploy_token.delete()
         group.delete()
+    for topic in gl.topics.list():
+        topic.delete()
     for variable in gl.variables.list():
         logging.info(f"Marking for deletion variable: {variable.key!r}")
         variable.delete()
@@ -390,6 +392,21 @@ def release(project, project_file):
     )
 
     return release
+
+
+@pytest.fixture(scope="function")
+def service(project):
+    """This is just a convenience fixture to make test cases slightly prettier. Project
+    services are not idempotent. A service cannot be retrieved until it is enabled.
+    After it is enabled the first time, it can never be fully deleted, only disabled."""
+    service = project.services.update("asana", {"api_key": "api_key"})
+
+    yield service
+
+    try:
+        project.services.delete("asana")
+    except gitlab.exceptions.GitlabDeleteError as e:
+        print(f"Service already disabled: {e}")
 
 
 @pytest.fixture(scope="module")

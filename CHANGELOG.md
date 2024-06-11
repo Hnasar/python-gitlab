@@ -2,6 +2,65 @@
 
 <!--next-version-placeholder-->
 
+## v3.4.0 (2022-04-28)
+### Feature
+* Emit a warning when using a `list()` method returns max ([`1339d64`](https://github.com/python-gitlab/python-gitlab/commit/1339d645ce58a2e1198b898b9549ba5917b1ff12))
+* **objects:** Support getting project/group deploy tokens by id ([`fcd37fe`](https://github.com/python-gitlab/python-gitlab/commit/fcd37feff132bd5b225cde9d5f9c88e62b3f1fd6))
+* **user:** Support getting user SSH key by id ([`6f93c05`](https://github.com/python-gitlab/python-gitlab/commit/6f93c0520f738950a7c67dbeca8d1ac8257e2661))
+* **api:** Re-add topic delete endpoint ([`d1d96bd`](https://github.com/python-gitlab/python-gitlab/commit/d1d96bda5f1c6991c8ea61dca8f261e5b74b5ab6))
+
+### Fix
+* Add ChunkedEncodingError to list of retryable exceptions ([`7beb20f`](https://github.com/python-gitlab/python-gitlab/commit/7beb20ff7b7b85fb92fc6b647d9c1bdb7568f27c))
+* Avoid passing redundant arguments to API ([`3431887`](https://github.com/python-gitlab/python-gitlab/commit/34318871347b9c563d01a13796431c83b3b1d58c))
+* **cli:** Add missing filters for project commit list ([`149d244`](https://github.com/python-gitlab/python-gitlab/commit/149d2446fcc79b31d3acde6e6d51adaf37cbb5d3))
+* Add 52x range to retry transient failures and tests ([`c3ef1b5`](https://github.com/python-gitlab/python-gitlab/commit/c3ef1b5c1eaf1348a18d753dbf7bda3c129e3262))
+* Also retry HTTP-based transient errors ([`3b49e4d`](https://github.com/python-gitlab/python-gitlab/commit/3b49e4d61e6f360f1c787aa048edf584aec55278))
+
+### Documentation
+* **api-docs:** Docs fix for application scopes ([`e1ad93d`](https://github.com/python-gitlab/python-gitlab/commit/e1ad93df90e80643866611fe52bd5c59428e7a88))
+
+## v3.3.0 (2022-03-28)
+### Feature
+* **object:** Add pipeline test report summary support ([`a97e0cf`](https://github.com/python-gitlab/python-gitlab/commit/a97e0cf81b5394b3a2b73d927b4efe675bc85208))
+
+### Fix
+* Support RateLimit-Reset header ([`4060146`](https://github.com/python-gitlab/python-gitlab/commit/40601463c78a6f5d45081700164899b2559b7e55))
+
+### Documentation
+* Fix typo and incorrect style ([`2828b10`](https://github.com/python-gitlab/python-gitlab/commit/2828b10505611194bebda59a0e9eb41faf24b77b))
+* Add pipeline test report summary support ([`d78afb3`](https://github.com/python-gitlab/python-gitlab/commit/d78afb36e26f41d727dee7b0952d53166e0df850))
+* **chore:** Include docs .js files in sdist ([`3010b40`](https://github.com/python-gitlab/python-gitlab/commit/3010b407bc9baabc6cef071507e8fa47c0f1624d))
+
+## v3.2.0 (2022-02-28)
+### Feature
+* **merge_request_approvals:** Add support for deleting MR approval rules ([`85a734f`](https://github.com/python-gitlab/python-gitlab/commit/85a734fec3111a4a5c4f0ddd7cb36eead96215e9))
+* **artifacts:** Add support for project artifacts delete API ([`c01c034`](https://github.com/python-gitlab/python-gitlab/commit/c01c034169789e1d20fd27a0f39f4c3c3628a2bb))
+* **mixins:** Allow deleting resources without IDs ([`0717517`](https://github.com/python-gitlab/python-gitlab/commit/0717517212b616cfd52cfd38dd5c587ff8f9c47c))
+* **objects:** Add a complete artifacts manager ([`c8c2fa7`](https://github.com/python-gitlab/python-gitlab/commit/c8c2fa763558c4d9906e68031a6602e007fec930))
+
+### Fix
+* **services:** Use slug for id_attr instead of custom methods ([`e30f39d`](https://github.com/python-gitlab/python-gitlab/commit/e30f39dff5726266222b0f56c94f4ccfe38ba527))
+* Remove custom `delete` method for labels ([`0841a2a`](https://github.com/python-gitlab/python-gitlab/commit/0841a2a686c6808e2f3f90960e529b26c26b268f))
+
+### Documentation
+* Enable gitter chat directly in docs ([`bd1ecdd`](https://github.com/python-gitlab/python-gitlab/commit/bd1ecdd5ad654b01b34e7a7a96821cc280b3ca67))
+* Add delete methods for runners and project artifacts ([`5e711fd`](https://github.com/python-gitlab/python-gitlab/commit/5e711fdb747fb3dcde1f5879c64dfd37bf25f3c0))
+* Add retry_transient infos ([`bb1f054`](https://github.com/python-gitlab/python-gitlab/commit/bb1f05402887c78f9898fbd5bd66e149eff134d9))
+* Add transient errors retry info ([`b7a1266`](https://github.com/python-gitlab/python-gitlab/commit/b7a126661175a3b9b73dbb4cb88709868d6d871c))
+* **artifacts:** Deprecate artifacts() and artifact() methods ([`64d01ef`](https://github.com/python-gitlab/python-gitlab/commit/64d01ef23b1269b705350106d8ddc2962a780dce))
+* Revert "chore: add temporary banner for v3" ([#1864](https://github.com/python-gitlab/python-gitlab/issues/1864)) ([`7a13b9b`](https://github.com/python-gitlab/python-gitlab/commit/7a13b9bfa4aead6c731f9a92e0946dba7577c61b))
+
+## v3.1.1 (2022-01-28)
+### Fix
+* **cli:** Make 'per_page' and 'page' type explicit ([`d493a5e`](https://github.com/python-gitlab/python-gitlab/commit/d493a5e8685018daa69c92e5942cbe763e5dac62))
+* **cli:** Make 'timeout' type explicit ([`bbb7df5`](https://github.com/python-gitlab/python-gitlab/commit/bbb7df526f4375c438be97d8cfa0d9ea9d604e7d))
+* **cli:** Allow custom methods in managers ([`8dfed0c`](https://github.com/python-gitlab/python-gitlab/commit/8dfed0c362af2c5e936011fd0b488b8b05e8a8a0))
+* **objects:** Make resource access tokens and repos available in CLI ([`e0a3a41`](https://github.com/python-gitlab/python-gitlab/commit/e0a3a41ce60503a25fa5c26cf125364db481b207))
+
+### Documentation
+* Enhance release docs for CI_JOB_TOKEN usage ([`5d973de`](https://github.com/python-gitlab/python-gitlab/commit/5d973de8a5edd08f38031cf9be2636b0e12f008d))
+* **changelog:** Add missing changelog items ([`01755fb`](https://github.com/python-gitlab/python-gitlab/commit/01755fb56a5330aa6fa4525086e49990e57ce50b))
+
 ## v3.1.0 (2022-01-14)
 ### Feature
 * add support for Group Access Token API ([`c01b7c4`](https://github.com/python-gitlab/python-gitlab/commit/c01b7c494192c5462ec673848287ef2a5c9bd737))
